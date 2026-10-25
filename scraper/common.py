@@ -190,7 +190,9 @@ def extract_jsonld_objects(soup: BeautifulSoup) -> list[dict]:
     return objects
 
 
-YEAR_RE = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)")
+# Not followed by a letter, so tail numbers ("Cessna 140 2073N") aren't read
+# as years.
+YEAR_RE = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?![\da-z])", re.IGNORECASE)
 LABELED_YEAR_RE = re.compile(r"\byear\W{0,6}(19\d{2}|20\d{2})\b", re.IGNORECASE)
 # A two-digit year leading the title ("76 Citabria", "75CITABRIA"), read as
 # 1930-1999. Only at the very start, where it can't be an engine time or
@@ -235,7 +237,7 @@ EXCLUDE_KEYWORDS = [
 
 
 # Phrases that contain an EXCLUDE_KEYWORDS word but describe a whole aircraft
-# ("Kitfox on floats", "kit built"), stripped from the title before
+# ("Clipped Wing Cub", "Super Cub on floats", "Kit Fox"), stripped from the title before
 # the keyword check so they don't get the ad thrown out as a parts listing.
 ALLOWED_PHRASES = [
     "clipped wing", "on floats", "with floats", "w floats", "on amphib floats",
@@ -248,9 +250,10 @@ def extract_listing_year(title: str, page_text: str = "") -> str | None:
     """Pull a 4-digit (or leading 2-digit) model year from the title, falling
     back to a labeled 'Year: 19xx' field in the ad body if the title doesn't
     state one."""
-    match = YEAR_RE.search(title)
-    if match:
-        return match.group(1)
+    latest = dt.date.today().year + 1
+    for match in YEAR_RE.finditer(title):
+        if int(match.group(1)) <= latest:
+            return match.group(1)
     match = SHORT_YEAR_RE.match(title.strip())
     if match:
         return "19" + match.group(1)
