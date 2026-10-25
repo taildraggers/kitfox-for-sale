@@ -51,11 +51,11 @@ _ROMAN = {"i": "1", "ii": "2", "iii": "3", "iv": "4"}
 _SERIES_RES = [
     re.compile(r"\b(?:series|s)\s?-?\s?([5-7])(?!\d)", re.IGNORECASE),
     re.compile(r"\bmodel\s?-?\s?([1-7]|iv|iii|ii|i)\b", re.IGNORECASE),
-    re.compile(r"kit\s?fox\s?-?\s?([1-7]|iv|iii|ii)\b", re.IGNORECASE),
+    re.compile(r"kit\s?fox\s?-?\s?([1-7]|iv|iii|ii)(?:\b|(?=ss\b))", re.IGNORECASE),
 ]
 # Named variants, most specific first.
 _VARIANT_RULES = [
-    (re.compile(r"super\s*sport", re.IGNORECASE), "Super Sport"),
+    (re.compile(r"super\s*sport|(?:\b|(?<=\d))ss\b", re.IGNORECASE), "Super Sport"),
     (re.compile(r"\bsti\b", re.IGNORECASE), "STi"),
     (re.compile(r"speedster", re.IGNORECASE), "Speedster"),
     (re.compile(r"classic\s*(?:iv|4)", re.IGNORECASE), "Classic IV"),
@@ -81,6 +81,9 @@ def _extract_model(title: str) -> tuple[str, str] | None:
             break
     for pattern, canonical in _VARIANT_RULES:
         if pattern.search(title):
+            # The Super Sport and STi only exist as Series 7 airplanes.
+            if canonical in ("Super Sport", "STi") and not parts:
+                parts.append("Series 7")
             parts.append(canonical)
             break
     return MAKE, " ".join(parts)
